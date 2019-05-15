@@ -32,7 +32,10 @@
         "laravel": {
             "providers": [
                 "TiGR\\CompactEncrypter\\CompactEncrypterServiceProvider"
-            ]
+            ],
+            "aliases": {
+                "Crypt": "TiGR\\CompactEncrypter\\CompactEncrypterFacade"
+            }
         }
     }
 }
