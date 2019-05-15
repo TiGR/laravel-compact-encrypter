@@ -270,11 +270,6 @@ class CompactEncrypter implements EncrypterContract
      */
     private function base64_decode(string $data): string
     {
-        $length = strlen($data);
-        if ($length % 4) {
-            $data = str_pad($data, $length + 4 - $length % 4, '=');
-        }
-
         return base64_decode(strtr($data, '-_', '+/'));
     }
 
