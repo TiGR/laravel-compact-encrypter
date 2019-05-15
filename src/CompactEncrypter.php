@@ -6,8 +6,9 @@ use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Contracts\Encryption\Encrypter as EncrypterContract;
 use Illuminate\Contracts\Encryption\EncryptException;
 use Illuminate\Encryption\Encrypter;
+use RuntimeException;
 
-class CompactEncrypter implements EncrypterContract
+final class CompactEncrypter implements EncrypterContract
 {
     const SUPPORTED_KEY_SIZES = [
         'AES-128-CBC' => 16,
@@ -38,19 +39,19 @@ class CompactEncrypter implements EncrypterContract
      * @param string $cipher
      * @return void
      *
-     * @throws \RuntimeException
+     * @throws RuntimeException
      */
     public function __construct(string $key, string $cipher = 'AES-128-CBC')
     {
         if (!static::supported($key, $cipher)) {
             if (!static::isCipherSupported($cipher)) {
-                throw new \RuntimeException('The only supported ciphers are AES-128-CBC and AES-256-CBC.');
+                throw new RuntimeException('The only supported ciphers are AES-128-CBC and AES-256-CBC.');
             } else {
-                throw new \RuntimeException(sprintf('Invalid key length (%d) for %s cipher.', strlen($key), $cipher));
+                throw new RuntimeException(sprintf('Invalid key length (%d) for %s cipher.', strlen($key), $cipher));
             }
         }
 
-        $this->key    = $key;
+        $this->key = $key;
         $this->cipher = $cipher;
     }
 
@@ -113,7 +114,7 @@ class CompactEncrypter implements EncrypterContract
         // vector and create the MAC for the encrypted value so we can then verify
         // its authenticity. Then, we'll JSON the data into the "payload" array.
         if ($useMac) {
-            $mac  = $this->hash($iv, $value);
+            $mac = $this->hash($iv, $value);
             $pack = pack('a20a16a*', $mac, $iv, $value);
         } else {
             $pack = pack('a16a*', $iv, $value);
@@ -180,6 +181,16 @@ class CompactEncrypter implements EncrypterContract
     }
 
     /**
+     * Get the encryption key.
+     *
+     * @return string
+     */
+    public function getKey()
+    {
+        return $this->key;
+    }
+
+    /**
      * Create a MAC for the given value.
      *
      * @param string $iv
@@ -201,16 +212,16 @@ class CompactEncrypter implements EncrypterContract
      */
     protected function getPayload(string $payload, bool $useMac = true): array
     {
-        $payload = unpack(($useMac ? 'a20mac/' : '').'a16iv/a*value', $this->base64_decode($payload));
+        $payload = @unpack(($useMac ? 'a20mac/' : '').'a16iv/a*value', $this->base64_decode($payload));
 
         // If the payload is not valid JSON or does not have the proper keys set we will
         // assume it is invalid and bail out of the routine since we will not be able
         // to decrypt the given value. We'll also check the MAC for this encryption.
-        if (!$this->validPayload($payload, $useMac)) {
+        if (!$this->isValidPayload($payload, $useMac)) {
             throw new DecryptException('The payload is invalid.');
         }
 
-        if ($useMac and !$this->validMac($payload)) {
+        if ($useMac and !$this->isValidMac($payload)) {
             throw new DecryptException('The MAC is invalid.');
         }
 
@@ -224,10 +235,25 @@ class CompactEncrypter implements EncrypterContract
      * @param bool $useMac
      * @return bool
      */
-    protected function validPayload($payload, bool $useMac = true)
+    protected function isValidPayload($payload, bool $useMac = true)
     {
-        return is_array($payload) && isset($payload['iv'], $payload['value']) && ($useMac ? isset($payload['mac']) : true) &&
-            strlen($payload['iv']) === openssl_cipher_iv_length($this->cipher);
+        if (!is_array($payload) or !(isset($payload['iv'], $payload['value']))) {
+            return false;
+        }
+
+        if ($useMac and !(isset($payload['mac']) and strlen($payload['mac']) === 20)) {
+            return false;
+        }
+
+        if (strlen($payload['iv']) !== openssl_cipher_iv_length($this->cipher)) {
+            return false;
+        }
+
+        if (strlen($payload['value']) % 16 !== 0) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -236,19 +262,9 @@ class CompactEncrypter implements EncrypterContract
      * @param array $payload
      * @return bool
      */
-    protected function validMac(array $payload)
+    protected function isValidMac(array $payload)
     {
         return hash_equals($payload['mac'], $this->hash($payload['iv'], $payload['value']));
-    }
-
-    /**
-     * Get the encryption key.
-     *
-     * @return string
-     */
-    public function getKey()
-    {
-        return $this->key;
     }
 
     /**
@@ -284,12 +300,12 @@ class CompactEncrypter implements EncrypterContract
 
     private function isCompactPayload($payload): bool
     {
-        if (strpos($payload, '=') or strpos($payload, '/') !== false or strpos($payload, '+') !== false) {
-            return false;
+        if (strlen($payload) % 4 !== 0 or strpos($payload, '-') !== false or strpos($payload, '_') !== false) {
+            return true;
         }
 
-        if (strpos($payload, '-') !== false or strpos($payload, '_') !== false) {
-            return true;
+        if (strpos($payload, '=') or strpos($payload, '/') !== false or strpos($payload, '+') !== false) {
+            return false;
         }
 
         $payload = base64_decode($payload);
