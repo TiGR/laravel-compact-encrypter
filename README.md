@@ -1,5 +1,11 @@
 # URL-safe Compact Encrypter for Laravel
 
+![Travis (.org)](https://img.shields.io/travis/TiGR/laravel-compact-encrypter.svg)
+![PHP from Packagist](https://img.shields.io/packagist/php-v/TiGR/laravel-compact-encrypter.svg)
+![Laravel Version](https://img.shields.io/badge/laravel-5.5%2B-brightgreen.svg)
+![Packagist Version](https://img.shields.io/packagist/v/TiGR/laravel-compact-encrypter.svg)
+![GitHub](https://img.shields.io/github/license/TiGR/laravel-compact-encrypter.svg)
+
 Drop-in replacement for Laravel encrypter that produces much more concise and 
 URL-safe output with fallback for encrypted data in old format. For Laravel 5.5+.
 
