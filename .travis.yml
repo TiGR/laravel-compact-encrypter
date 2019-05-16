@@ -1,0 +1,21 @@
+language: php
+matrix:
+  include:
+    - php: 7.0
+      env:
+        - PHPUNIT=6.5.14 LARAVEL=5.5.44
+    - php: 7.1
+      env:
+        - PHPUNIT=7.5.11 LARAVEL=^5.8
+    - php: 7.2
+      env:
+        - PHPUNIT=8.1.5 LARAVEL=^5.8
+    - php: 7.3
+      env:
+        - PHPUNIT=8.1.5 LARAVEL=^5.8
+
+install:
+  - sh -c 'if [ -n "$PHPUNIT" ]; then composer require illuminate/encryption:$LARAVEL phpunit/phpunit:$PHPUNIT --no-interaction; else composer install --no-interaction; fi'
+
+script:
+  - phpunit
