@@ -18,4 +18,4 @@ install:
   - sh -c 'if [ -n "$PHPUNIT" ]; then composer require illuminate/encryption:$LARAVEL phpunit/phpunit:$PHPUNIT --no-interaction; else composer install --no-interaction; fi'
 
 script:
-  - phpunit
+  - vendor/bin/phpunit
